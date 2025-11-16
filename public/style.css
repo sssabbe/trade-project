@@ -134,3 +134,19 @@ footer p {
         padding: 10px;
     }
 }
+
+.in-stock {
+    color: green;
+    font-weight: bold;
+}
+
+.out-of-stock {
+    color: red;
+    font-weight: bold;
+}
+
+.error {
+    color: red;
+    text-align: center;
+    padding: 20px;
+}
