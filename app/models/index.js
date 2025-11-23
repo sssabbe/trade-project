@@ -23,6 +23,8 @@ db.sequelize = sequelize;
 db.goodsGroup = require("./goods-group.model.js")(sequelize, Sequelize);
 db.flower = require("./flower.model.js")(sequelize, Sequelize);
 db.bouquet = require("./bouquet.model.js")(sequelize, Sequelize);
+
+// Новые модели
 db.category = require("./category.model.js")(sequelize, Sequelize);
 db.supplier = require("./supplier.model.js")(sequelize, Sequelize);
 db.customer = require("./customer.model.js")(sequelize, Sequelize);
@@ -32,7 +34,9 @@ db.priceList = require("./price-list.model.js")(sequelize, Sequelize);
 db.sale = require("./sale.model.js")(sequelize, Sequelize);
 db.saleItem = require("./sale-item.model.js")(sequelize, Sequelize);
 
-// Связи между существующими моделями
+// ==================== СВЯЗИ ДЛЯ СУЩЕСТВУЮЩИХ МОДЕЛЕЙ ====================
+
+// Связи между цветами и goodsGroup (старые категории)
 db.flower.belongsTo(db.goodsGroup, { 
     as: 'category',
     foreignKey: 'categoryId' 
@@ -42,6 +46,18 @@ db.goodsGroup.hasMany(db.flower, {
     as: 'flowers',
     foreignKey: 'categoryId'
 });
+
+// Самосвязь для goodsGroup (если нужно)
+db.goodsGroup.belongsTo(db.goodsGroup, { 
+    as: 'parentGroup', 
+    foreignKey: 'parent_category_id' 
+});
+db.goodsGroup.hasMany(db.goodsGroup, { 
+    as: 'childGroups', 
+    foreignKey: 'parent_category_id' 
+});
+
+// ==================== СВЯЗИ ДЛЯ НОВЫХ МОДЕЛЕЙ ====================
 
 // Категория -> Товары
 db.category.hasMany(db.product, { 

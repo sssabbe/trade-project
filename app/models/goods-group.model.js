@@ -1,22 +1,32 @@
 module.exports = (sequelize, Sequelize) => {
-    const GoodsGroup = sequelize.define("goodsgroup", {
-        name: {
-            type: Sequelize.STRING,
-            allowNull: false
-        },
-        description: {
-            type: Sequelize.STRING
-        },
-        baseGoodsGroup: {
-            type: Sequelize.INTEGER
-        }
-    });
-    
-    // Связь для иерархии групп (родительская группа)
-    GoodsGroup.belongsTo(GoodsGroup, { 
-        as: 'parentGroup',
-        foreignKey: 'baseGoodsGroup' 
-    });
+  const GoodsGroup = sequelize.define("goodsGroup", {
+    name: {
+      type: Sequelize.STRING,
+      allowNull: false
+    },
+    description: {
+      type: Sequelize.TEXT
+    },
+    baseGoodsGroup: {
+      type: Sequelize.BOOLEAN,
+      defaultValue: false
+    }
+  }, {
+    tableName: 'goodsgroups',
+    timestamps: true
+  });
 
-    return GoodsGroup;
+  // Самосвязь для иерархии категорий
+  GoodsGroup.associate = function(models) {
+    GoodsGroup.belongsTo(models.goodsGroup, { 
+      as: 'parent', 
+      foreignKey: 'parent_category_id' 
+    });
+    GoodsGroup.hasMany(models.goodsGroup, { 
+      as: 'children', 
+      foreignKey: 'parent_category_id' 
+    });
+  };
+
+  return GoodsGroup;
 };
