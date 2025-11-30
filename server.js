@@ -3,6 +3,17 @@ const express = require("express");
 const db = require("./app/models");
 const path = require("path");
 
+// Импорт контроллеров
+const goodsGroups = require("./app/controllers/goodsgroup.controller.js");
+const categories = require("./app/controllers/category.controller.js");
+const products = require("./app/controllers/product.controller.js");
+const customers = require("./app/controllers/customer.controller.js");
+const employees = require("./app/controllers/employee.controller.js");
+const suppliers = require("./app/controllers/supplier.controller.js");
+const sales = require("./app/controllers/sale.controller.js");
+const priceList = require("./app/controllers/price-list.controller.js");
+const saleItems = require("./app/controllers/sale-item.controller.js");
+
 const app = express();
 const PORT = process.env.NODE_LOCAL_PORT || 8080;
 
@@ -55,9 +66,9 @@ app.get("/api/health", (req, res) => {
   });
 });
 
-// ==================== СУЩЕСТВУЮЩИЕ МАРШРУТЫ ====================
+// ==================== СТАРЫЕ МАРШРУТЫ (goodsGroup, flower, bouquet) ====================
 
-// Маршруты для товаров (цветов)
+// Маршруты для товаров (цветов) - пока оставляем как есть
 app.get("/api/flowers", async (req, res) => {
   try {
     console.log("🌸 Запрос всех цветов");
@@ -113,36 +124,14 @@ app.get("/api/flowers/:id", async (req, res) => {
   }
 });
 
-// Маршруты для групп товаров (категории цветов)
-app.get("/api/categories", async (req, res) => {
-  try {
-    console.log("📦 Получение всех категорий цветов");
-    const categories = await db.goodsGroup.findAll({
-      include: [{
-        model: db.goodsGroup,
-        as: 'parent'
-      }],
-      order: [['hierarchy_level', 'ASC']]
-    });
-    console.log(`✅ Найдено категорий: ${categories.length}`);
-    res.json(categories);
-  } catch (err) {
-    console.error("❌ Ошибка при получении категорий:", err.message);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.post("/api/categories", async (req, res) => {
-  try {
-    console.log("📦 Создание новой категории:", req.body);
-    const category = await db.goodsGroup.create(req.body);
-    console.log("✅ Категория создана:", category.id);
-    res.json(category);
-  } catch (err) {
-    console.error("❌ Ошибка при создании категории:", err.message);
-    res.status(500).json({ error: err.message });
-  }
-});
+// Маршруты для СТАРЫХ категорий (goodsGroup) - через контроллер
+app.get("/api/goods-categories", goodsGroups.findAll);
+app.post("/api/goods-categories", goodsGroups.create);
+app.get("/api/goods-categories/:id", goodsGroups.findOne);
+app.put("/api/goods-categories/:id", goodsGroups.update);
+app.delete("/api/goods-categories/:id", goodsGroups.delete);
+app.delete("/api/goods-categories", goodsGroups.deleteAll);
+app.get("/api/goods-categories-base", goodsGroups.findAllBase);
 
 // Маршруты для букетов
 app.get("/api/bouquets", async (req, res) => {
@@ -187,343 +176,71 @@ app.get("/api/flowers/popular", async (req, res) => {
   }
 });
 
-// ==================== НОВЫЕ МАРШРУТЫ ДЛЯ ТАБЛИЦ ====================
+// ==================== НОВЫЕ МАРШРУТЫ ЧЕРЕЗ КОНТРОЛЛЕРЫ ====================
 
 // 📊 ПОКУПАТЕЛИ
-app.get("/api/customers", async (req, res) => {
-  try {
-    console.log("👥 Запрос всех покупателей");
-    const customers = await db.customer.findAll({
-      order: [['customer_code', 'ASC']]
-    });
-    console.log(`✅ Найдено покупателей: ${customers.length}`);
-    res.json(customers);
-  } catch (err) {
-    console.error("❌ Ошибка получения покупателей:", err.message);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.post("/api/customers", async (req, res) => {
-  try {
-    console.log("👥 Создание нового покупателя:", req.body);
-    const customer = await db.customer.create(req.body);
-    console.log("✅ Покупатель создан с кодом:", customer.customer_code);
-    res.json(customer);
-  } catch (err) {
-    console.error("❌ Ошибка создания покупателя:", err.message);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.get("/api/customers/:id", async (req, res) => {
-  try {
-    const customer = await db.customer.findByPk(req.params.id);
-    customer ? res.json(customer) : res.status(404).json({ error: "Покупатель не найден" });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.put("/api/customers/:id", async (req, res) => {
-  try {
-    const updated = await db.customer.update(req.body, {
-      where: { customer_code: req.params.id }
-    });
-    updated[0] === 1 ? res.json({ message: "Покупатель обновлен" }) : res.status(404).json({ error: "Покупатель не найден" });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.delete("/api/customers/:id", async (req, res) => {
-  try {
-    const deleted = await db.customer.destroy({
-      where: { customer_code: req.params.id }
-    });
-    deleted === 1 ? res.json({ message: "Покупатель удален" }) : res.status(404).json({ error: "Покупатель не найден" });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
+app.get("/api/customers", customers.findAll);
+app.post("/api/customers", customers.create);
+app.get("/api/customers/:id", customers.findOne);
+app.put("/api/customers/:id", customers.update);
+app.delete("/api/customers/:id", customers.delete);
+app.delete("/api/customers", customers.deleteAll);
 
 // 👨‍💼 СОТРУДНИКИ
-app.get("/api/employees", async (req, res) => {
-  try {
-    console.log("👨‍💼 Запрос всех сотрудников");
-    const employees = await db.employee.findAll({
-      order: [['employee_id', 'ASC']]
-    });
-    console.log(`✅ Найдено сотрудников: ${employees.length}`);
-    res.json(employees);
-  } catch (err) {
-    console.error("❌ Ошибка получения сотрудников:", err.message);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.post("/api/employees", async (req, res) => {
-  try {
-    console.log("👨‍💼 Создание нового сотрудника:", req.body);
-    const employee = await db.employee.create(req.body);
-    console.log("✅ Сотрудник создан с ID:", employee.employee_id);
-    res.json(employee);
-  } catch (err) {
-    console.error("❌ Ошибка создания сотрудника:", err.message);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.get("/api/employees/:id", async (req, res) => {
-  try {
-    const employee = await db.employee.findByPk(req.params.id);
-    employee ? res.json(employee) : res.status(404).json({ error: "Сотрудник не найден" });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.put("/api/employees/:id", async (req, res) => {
-  try {
-    const updated = await db.employee.update(req.body, {
-      where: { employee_id: req.params.id }
-    });
-    updated[0] === 1 ? res.json({ message: "Сотрудник обновлен" }) : res.status(404).json({ error: "Сотрудник не найден" });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.delete("/api/employees/:id", async (req, res) => {
-  try {
-    const deleted = await db.employee.destroy({
-      where: { employee_id: req.params.id }
-    });
-    deleted === 1 ? res.json({ message: "Сотрудник удален" }) : res.status(404).json({ error: "Сотрудник не найден" });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
+app.get("/api/employees", employees.findAll);
+app.post("/api/employees", employees.create);
+app.get("/api/employees/:id", employees.findOne);
+app.put("/api/employees/:id", employees.update);
+app.delete("/api/employees/:id", employees.delete);
+app.delete("/api/employees", employees.deleteAll);
 
 // 🌹 ТОВАРЫ (PRODUCTS)
-app.get("/api/products", async (req, res) => {
-  try {
-    console.log("🌹 Запрос всех товаров");
-    const products = await db.product.findAll({
-      include: [
-        { model: db.category, as: 'category' },
-        { model: db.supplier, as: 'supplier' }
-      ],
-      order: [['product_name', 'ASC']]
-    });
-    console.log(`✅ Найдено товаров: ${products.length}`);
-    res.json(products);
-  } catch (err) {
-    console.error("❌ Ошибка получения товаров:", err.message);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.post("/api/products", async (req, res) => {
-  try {
-    console.log("🌹 Создание нового товара:", req.body);
-    const product = await db.product.create(req.body);
-    console.log("✅ Товар создан с артикулом:", product.article);
-    res.json(product);
-  } catch (err) {
-    console.error("❌ Ошибка создания товара:", err.message);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.get("/api/products/:id", async (req, res) => {
-  try {
-    const product = await db.product.findByPk(req.params.id, {
-      include: [
-        { model: db.category, as: 'category' },
-        { model: db.supplier, as: 'supplier' }
-      ]
-    });
-    product ? res.json(product) : res.status(404).json({ error: "Товар не найден" });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.put("/api/products/:id", async (req, res) => {
-  try {
-    const updated = await db.product.update(req.body, {
-      where: { article: req.params.id }
-    });
-    updated[0] === 1 ? res.json({ message: "Товар обновлен" }) : res.status(404).json({ error: "Товар не найден" });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.delete("/api/products/:id", async (req, res) => {
-  try {
-    const deleted = await db.product.destroy({
-      where: { article: req.params.id }
-    });
-    deleted === 1 ? res.json({ message: "Товар удален" }) : res.status(404).json({ error: "Товар не найден" });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
+app.get("/api/products", products.findAll);
+app.post("/api/products", products.create);
+app.get("/api/products/:id", products.findOne);
+app.put("/api/products/:id", products.update);
+app.delete("/api/products/:id", products.delete);
+app.delete("/api/products", products.deleteAll);
 
 // 🚚 ПОСТАВЩИКИ
-app.get("/api/suppliers", async (req, res) => {
-  try {
-    console.log("🚚 Запрос всех поставщиков");
-    const suppliers = await db.supplier.findAll({
-      order: [['supplier_code', 'ASC']]
-    });
-    console.log(`✅ Найдено поставщиков: ${suppliers.length}`);
-    res.json(suppliers);
-  } catch (err) {
-    console.error("❌ Ошибка получения поставщиков:", err.message);
-    res.status(500).json({ error: err.message });
-  }
-});
+app.get("/api/suppliers", suppliers.findAll);
+app.post("/api/suppliers", suppliers.create);
+app.get("/api/suppliers/:id", suppliers.findOne);
+app.put("/api/suppliers/:id", suppliers.update);
+app.delete("/api/suppliers/:id", suppliers.delete);
+app.delete("/api/suppliers", suppliers.deleteAll);
 
-app.post("/api/suppliers", async (req, res) => {
-  try {
-    console.log("🚚 Создание нового поставщика:", req.body);
-    const supplier = await db.supplier.create(req.body);
-    console.log("✅ Поставщик создан с кодом:", supplier.supplier_code);
-    res.json(supplier);
-  } catch (err) {
-    console.error("❌ Ошибка создания поставщика:", err.message);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// Маршруты для групп товаров (категории цветов)
-app.get("/api/categories", async (req, res) => {
-  try {
-    console.log("📦 Получение всех категорий цветов");
-    const categories = await db.goodsGroup.findAll({
-      include: [{
-        model: db.goodsGroup,
-        as: 'parent'
-      }],
-      order: [['createdAt', 'DESC']]
-    });
-    console.log(`✅ Найдено категорий: ${categories.length}`);
-    res.json(categories);
-  } catch (err) {
-    console.error("❌ Ошибка при получении категорий:", err.message);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.post("/api/categories", async (req, res) => {
-  try {
-    console.log("📂 Создание новой категории:", req.body);
-    const category = await db.category.create(req.body);
-    console.log("✅ Категория создана с кодом:", category.category_code);
-    res.json(category);
-  } catch (err) {
-    console.error("❌ Ошибка создания категории:", err.message);
-    res.status(500).json({ error: err.message });
-  }
-});
+// 📂 НОВЫЕ КАТЕГОРИИ (category)
+app.get("/api/categories", categories.findAll);
+app.post("/api/categories", categories.create);
+app.get("/api/categories/:id", categories.findOne);
+app.put("/api/categories/:id", categories.update);
+app.delete("/api/categories/:id", categories.delete);
+app.delete("/api/categories", categories.deleteAll);
 
 // 💰 ПРОДАЖИ
-app.get("/api/sales", async (req, res) => {
-  try {
-    console.log("💰 Запрос всех продаж");
-    const sales = await db.sale.findAll({
-      include: [
-        { model: db.employee, as: 'employee' },
-        { model: db.customer, as: 'customer' },
-        { 
-          model: db.saleItem, 
-          as: 'saleItems',
-          include: [{ model: db.product, as: 'product' }]
-        }
-      ],
-      order: [['sale_datetime', 'DESC']]
-    });
-    console.log(`✅ Найдено продаж: ${sales.length}`);
-    res.json(sales);
-  } catch (err) {
-    console.error("❌ Ошибка получения продаж:", err.message);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.post("/api/sales", async (req, res) => {
-  try {
-    console.log("💰 Создание новой продажи:", req.body);
-    const sale = await db.sale.create(req.body);
-    console.log("✅ Продажа создана с номером:", sale.receipt_number);
-    res.json(sale);
-  } catch (err) {
-    console.error("❌ Ошибка создания продажи:", err.message);
-    res.status(500).json({ error: err.message });
-  }
-});
+app.get("/api/sales", sales.findAll);
+app.post("/api/sales", sales.create);
+app.get("/api/sales/:id", sales.findOne);
+app.put("/api/sales/:id", sales.update);
+app.delete("/api/sales/:id", sales.delete);
+app.delete("/api/sales", sales.deleteAll);
 
 // 🏷️ ПРАЙС-ЛИСТ
-app.get("/api/pricelist", async (req, res) => {
-  try {
-    console.log("🏷️ Запрос прайс-листа");
-    const prices = await db.priceList.findAll({
-      include: [{ model: db.product, as: 'product' }],
-      order: [['effective_date', 'DESC']]
-    });
-    console.log(`✅ Найдено записей в прайс-листе: ${prices.length}`);
-    res.json(prices);
-  } catch (err) {
-    console.error("❌ Ошибка получения прайс-листа:", err.message);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.post("/api/pricelist", async (req, res) => {
-  try {
-    console.log("🏷️ Добавление новой цены:", req.body);
-    const price = await db.priceList.create(req.body);
-    console.log("✅ Цена добавлена с ID:", price.price_id);
-    res.json(price);
-  } catch (err) {
-    console.error("❌ Ошибка добавления цены:", err.message);
-    res.status(500).json({ error: err.message });
-  }
-});
+app.get("/api/pricelist", priceList.findAll);
+app.post("/api/pricelist", priceList.create);
+app.get("/api/pricelist/:id", priceList.findOne);
+app.put("/api/pricelist/:id", priceList.update);
+app.delete("/api/pricelist/:id", priceList.delete);
+app.delete("/api/pricelist", priceList.deleteAll);
 
 // 🛒 СОСТАВ ПРОДАЖИ
-app.get("/api/sale-items", async (req, res) => {
-  try {
-    console.log("🛒 Запрос состава продаж");
-    const saleItems = await db.saleItem.findAll({
-      include: [
-        { model: db.sale, as: 'sale' },
-        { model: db.product, as: 'product' }
-      ],
-      order: [['receipt_number', 'DESC']]
-    });
-    console.log(`✅ Найдено позиций продаж: ${saleItems.length}`);
-    res.json(saleItems);
-  } catch (err) {
-    console.error("❌ Ошибка получения состава продаж:", err.message);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.post("/api/sale-items", async (req, res) => {
-  try {
-    console.log("🛒 Добавление позиции продажи:", req.body);
-    const saleItem = await db.saleItem.create(req.body);
-    console.log("✅ Позиция продажи добавлена");
-    res.json(saleItem);
-  } catch (err) {
-    console.error("❌ Ошибка добавления позиции продажи:", err.message);
-    res.status(500).json({ error: err.message });
-  }
-});
+app.get("/api/sale-items", saleItems.findAll);
+app.post("/api/sale-items", saleItems.create);
+app.get("/api/sale-items/:id", saleItems.findOne);
+app.put("/api/sale-items/:id", saleItems.update);
+app.delete("/api/sale-items/:id", saleItems.delete);
+app.delete("/api/sale-items", saleItems.deleteAll);
 
 // ==================== ДОПОЛНИТЕЛЬНЫЕ МАРШРУТЫ ====================
 
@@ -604,25 +321,24 @@ app.use((err, req, res, next) => {
 });
 
 console.log("🔄 Загруженные маршруты для цветочного магазина:");
-console.log("   📊 Основные маршруты:");
-console.log("   GET  /api/health");
-console.log("   GET  /api/flowers");
-console.log("   POST /api/flowers");
-console.log("   GET  /api/flowers/:id");
-console.log("   GET  /api/flowers/popular");
-console.log("   GET  /api/categories");
-console.log("   POST /api/categories");
-console.log("   GET  /api/bouquets");
-console.log("   POST /api/bouquets");
+console.log("   🌸 Старые маршруты:");
+console.log("   GET/POST /api/flowers");
+console.log("   GET /api/flowers/:id");
+console.log("   GET /api/flowers/popular");
+console.log("   GET/POST/PUT/DELETE /api/goods-categories");
+console.log("   GET/POST /api/bouquets");
 
-console.log("   👥 Новые маршруты:");
+console.log("   📊 Новые маршруты через контроллеры:");
 console.log("   GET/POST/PUT/DELETE /api/customers");
 console.log("   GET/POST/PUT/DELETE /api/employees");
 console.log("   GET/POST/PUT/DELETE /api/products");
-console.log("   GET/POST /api/suppliers");
-console.log("   GET/POST /api/sales");
-console.log("   GET/POST /api/pricelist");
-console.log("   GET/POST /api/sale-items");
+console.log("   GET/POST/PUT/DELETE /api/suppliers");
+console.log("   GET/POST/PUT/DELETE /api/categories");
+console.log("   GET/POST/PUT/DELETE /api/sales");
+console.log("   GET/POST/PUT/DELETE /api/pricelist");
+console.log("   GET/POST/PUT/DELETE /api/sale-items");
+
+console.log("   🔍 Дополнительные маршруты:");
 console.log("   GET /api/categories/:id/products");
 console.log("   GET /api/products/:id/prices");
 console.log("   GET /api/products/search/:query");
